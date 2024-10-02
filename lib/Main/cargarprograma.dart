@@ -23,15 +23,15 @@ class _CargarProgramaScreenState extends State<CargarProgramaScreen> {
 
   // Función para iniciar el progreso
   void _startLoading() {
-    Timer.periodic(Duration(milliseconds: 50), (timer) {
+    Timer.periodic(Duration(milliseconds: 100), (timer) {  // Cambiado a 100 milisegundos
       setState(() {
-        _progress += 1;
+        _progress += 1;  // Incrementa en 1 cada 100ms
         if (_progress >= 100) {
-          timer.cancel(); // Detiene el temporizador cuando el progreso llega al 100%
+          timer.cancel();  // Detiene el temporizador cuando el progreso llega al 100%
           setState(() {
-            _statusText = 'Programa generado exitosamente 🧠👌🏻'; // Cambia el texto
+            _statusText = 'Programa generado exitosamente 🧠👌🏻';
           });
-          _goToHome(); // Llamada para redirigir a Home después del retraso
+          _goToHome();  // Redirige a Home después del retraso
         }
       });
     });

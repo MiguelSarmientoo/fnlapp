@@ -51,8 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return remaining;
   }
 
-  // Función para obtener el nivel de estrés desde la API
   Future<void> obtenerNivelEstresYProgramas() async {
+    int maxRetries = 5;  // Máximo número de reintentos
+    int retryCount = 0;  // Contador de reintentos
+    int waitTime = 1;    // Tiempo de espera inicial en segundos
+
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       userId = prefs.getInt('userId');
@@ -82,23 +85,42 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           });
 
-          final responseProgramas = await http.post(
-            Uri.parse('http://18.225.10.73:3000/api/userprograma/getprogramcompleto/$userId'),
-            headers: {"Content-Type": "application/json"},
-            body: jsonEncode({'user_id': userId})  // Asegúrate de incluir el cuerpo si es necesario
-          );
-          if (responseProgramas.statusCode == 200) {
-            // Procesar la respuesta JSON y almacenar los programas
-            final List<dynamic> programasData = jsonDecode(responseProgramas.body);
+          // Intentos de búsqueda hasta encontrar los programas o alcanzar el límite de reintentos
+          while (retryCount < maxRetries) {
+            final responseProgramas = await http.post(
+              Uri.parse('http://18.225.10.73:3000/api/userprograma/getprogramcompleto/$userId'),
+              headers: {"Content-Type": "application/json"},
+              body: jsonEncode({'user_id': userId})
+            );
+
+            if (responseProgramas.statusCode == 200) {
+              // Procesar la respuesta JSON y almacenar los programas
+              final List<dynamic> programasData = jsonDecode(responseProgramas.body);
+              setState(() {
+                programas = programasData;
+                isLoading = false;  // Ya no estamos cargando
+              });
+              break;  // Salir del bucle si encontramos los programas
+            } else {
+              // Incrementar el contador de reintentos y hacer una pausa antes del próximo intento
+              retryCount++;
+              await Future.delayed(Duration(seconds: waitTime));
+              waitTime *= 2;  // Incremento exponencial del tiempo de espera
+            }
+          }
+
+          // Si alcanzamos el máximo de reintentos sin éxito
+          if (retryCount == maxRetries) {
             setState(() {
-              programas = programasData;
-              isLoading = false;  // Ya no estamos cargando
-            });
-          } else {
-            setState(() {
+              nivelEstres = "No se encontraron programas después de varios intentos";
               isLoading = false;
             });
           }
+        } else {
+          setState(() {
+            nivelEstres = "Error al obtener el nivel de estrés";
+            isLoading = false;
+          });
         }
       } else {
         setState(() {
